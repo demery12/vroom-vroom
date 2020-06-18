@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Vroom Vroom</title>
+</head>
+<body>
+    <canvas id="ctx" width="500" height="500" style="border:1px solid #000000;"></canvas>
+    <audio autoplay loop preload="metadata" style=" width:300px;">
+        <source src="static/audio/vroom_vroom.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio><br />
+    <script>
+        const HEIGHT = 500;
+        const WIDTH = 500;
+        let LEVEL_SPEED = 10;
+        const ctx = document.getElementById("ctx").getContext("2d");
+        ctx.font = "30px Arial";
+
+        class Entity {
+            constructor(params) {
+                this.x = params.x || 0;
+                this.y = params.y || 0;
+                this.img = params.img || null;
+            }
+        }
+
+        class Car extends Entity {
+            constructor(params) {
+                super(params);
+                this.x_speed = 0;
+                this.y_speed = 0;
+                this.max_x_speed = 5;
+                this.max_y_speed = 7;
+            }
+            draw(){
+                let car_orientation;
+                if (this.x_speed == 0){
+                    car_orientation = 'forward_car';
+                } else if (this.x_speed > 0) {
+                    car_orientation = 'right_car';
+                } else {
+                    car_orientation = 'left_car';
+                }
+                ctx.drawImage(car_img[car_orientation], this.x, this.y, car_img.forward_car.sWidth, car_img.forward_car.sHeight);
+                this.y += this.y_speed;
+                this.x += this.x_speed;
+            }
+
+        }
+
+
+        class Obstacle extends Entity {
+            constructor(params) {
+                super(params);
+                this.y_speed = LEVEL_SPEED;
+                this.id = Math.random();
+                this.img = params.img;
+                Obstacle.list[this.id] = this;
+            }
+            draw(){
+                ctx.drawImage(this.img.tree1, this.x, this.y, this.img.tree1.sWidth, this.img.tree1.sHeight);
+                this.y += this.y_speed;
+            }
+        }
+
+        class Collectible extends Entity {
+            constructor(params) {
+                super(params);
+                this.y_speed = LEVEL_SPEED;
+                this.id = Math.random();
+                this.img = params.img;
+                Collectible.list[this.id] = this;
+            }
+            draw(){
+                ctx.drawImage(this.img.pill, this.x, this.y, this.img.pill.sWidth, this.img.pill.sHeight);
+                this.y += this.y_speed;
+            }
+        }
+
+        Obstacle.list = {};
+        Collectible.list = {};
+
+        const car_img = {};
+        car_img.forward_car = new Image();
+        car_img.forward_car.src = 'static/img/pink_car_forward.png'
+        car_img.forward_car.sHeight = car_img.forward_car.height * 0.04;
+        car_img.forward_car.sWidth = car_img.forward_car.width * 0.04;
+
+        car_img.left_car = new Image();
+        car_img.left_car.src = 'static/img/pink_car_left.png'
+        car_img.left_car.sHeight = car_img.left_car.height * 0.1;
+        car_img.left_car.sWidth = car_img.left_car.width * 0.1;
+
+        car_img.right_car = new Image();
+        car_img.right_car.src = 'static/img/pink_car_right.png'
+        car_img.right_car.sHeight = car_img.right_car.height * 0.04;
+        car_img.right_car.sWidth = car_img.right_car.width * 0.04;
+
+        const obstacle_img = {};
+        obstacle_img.tree1 = new Image();
+        obstacle_img.tree1.src = 'static/img/trees/palmtree1.png';
+        obstacle_img.tree1.sHeight = obstacle_img.tree1.height * 1.0;
+        obstacle_img.tree1.sWidth = obstacle_img.tree1.width * 1.0;
+
+        obstacle_img.dancing_tree1 = new Image();
+        obstacle_img.dancing_tree1.src = 'static/img/trees/dancing_palmtree1.gif';
+        obstacle_img.dancing_tree1.sHeight = 0.1;
+        obstacle_img.dancing_tree1.sWidth = 0.1;
+
+        const pill_img = {};
+        pill_img.pill = new Image();
+        pill_img.pill.src = 'static/img/pill.png';
+        pill_img.pill.sHeight = pill_img.pill.height * 0.2;
+        pill_img.pill.sWidth = pill_img.pill.width * 0.2;
+
+        const car = new Car({x:WIDTH/2 - car_img.forward_car.sWidth/2, y: HEIGHT - (car_img.forward_car.sHeight + 5), img:car_img})
+
+        function drawBackground(){
+            ctx.fillStyle = "#f3d74c";
+            ctx.fillRect(0, 0, HEIGHT, WIDTH);
+            ctx.fillStyle = "black";
+        }
+
+        function drawObstacles(){
+            const r = Math.random();
+            const draw_frequency = 0.1;
+            if (r < draw_frequency){
+                new Obstacle({x: r * WIDTH * (1/draw_frequency), y: 0 - obstacle_img.tree1.sHeight, img:obstacle_img})
+            }
+            const remove_list = [];
+            for (let o_id in Obstacle.list){
+                const o = Obstacle.list[o_id];
+                o.draw();
+                if (o.y > HEIGHT + 5){
+                    remove_list.push(o.id);
+                }
+            }
+            for(let o of remove_list){
+                delete Obstacle.list[o];
+            }
+        }
+        function drawCollectibles() {
+            const r = Math.random();
+            const draw_frequency = 0.05;
+            if (r < draw_frequency){
+                new Collectible({x: r * WIDTH * (1/draw_frequency), y: 0 - pill_img.pill.sHeight, img:pill_img})
+            }
+            const remove_list = [];
+            for (let c_id in Collectible.list){
+                const c = Collectible.list[c_id];
+                c.draw();
+                if (c.y > HEIGHT + 5){
+                    remove_list.push(c.id);
+                }
+            }
+            for(let c of remove_list){
+                delete Collectible.list[c];
+            }
+        }
+
+        function drawPlayer(){
+            car.draw()
+        }
+
+        // update loop
+        setInterval(function(){
+            ctx.clearRect(0,0,500,500);
+            drawBackground();
+            drawObstacles();
+            drawCollectibles();
+            drawPlayer();
+
+        }, 40)
+
+        document.onkeydown = function (event) {
+            if (event.code === 'KeyD') //d
+                car.x_speed = car.max_x_speed;
+            else if (event.code === 'KeyS') //s
+                car.y_speed = car.max_y_speed
+            else if (event.code === 'KeyA') //a
+                car.x_speed = -car.max_x_speed;
+            else if (event.code === 'KeyW') //w
+                car.y_speed = -car.max_y_speed
+        }
+
+        document.onkeyup = function (event) {
+            if (event.code === 'KeyD') //d
+                car.x_speed = 0;
+            else if (event.code === 'KeyS') //s
+                car.y_speed = 0;
+            else if (event.code === 'KeyA') //a
+                car.x_speed = 0;
+            else if (event.code === 'KeyW') //w
+                car.y_speed = 0;
+        }
+    </script>
+</body>
+</html>
