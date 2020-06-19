@@ -31,34 +31,33 @@
                     this.y <= (entity.y + entity.height) &&
                     this.y + this.height > entity.y;
             }
+            add_image(name, path, scale, callback){
+                this.img[name] = new Image();
+                this.img[name].onload = function() {
+                    this.img[name].sHeight = this.img[name].height * scale;
+                    this.img[name].sWidth = this.img[name].width * scale
+                    callback();
+                }.bind(this);
+                this.img[name].src = path;
+            }
         }
 
         class Car extends Entity {
             constructor(params) {
-                const car_img = {};
                 const CAR_SCALE = 0.04;
-                car_img.forward_car = new Image();
-                car_img.forward_car.src = 'static/img/pink_car_forward.png';
-                car_img.forward_car.sHeight = car_img.forward_car.height * CAR_SCALE;
-                car_img.forward_car.sWidth = car_img.forward_car.width * CAR_SCALE;
 
-                car_img.left_car = new Image();
-                car_img.left_car.src = 'static/img/pink_car_left.png';
-                car_img.left_car.sHeight = car_img.left_car.height * CAR_SCALE;
-                car_img.left_car.sWidth = car_img.left_car.width * CAR_SCALE;
-
-                car_img.right_car = new Image();
-                car_img.right_car.src = 'static/img/pink_car_right.png';
-                car_img.right_car.sHeight = car_img.right_car.height * CAR_SCALE;
-                car_img.right_car.sWidth = car_img.right_car.width * CAR_SCALE;
-                params.img = car_img
-
-                params.x = WIDTH/2 - car_img.forward_car.sWidth/2;
-                params.y = HEIGHT - (car_img.forward_car.sHeight + 5);
-                params.height = car_img.forward_car.sHeight;
-                params.width = car_img.forward_car.sWidth;
+                params.img = {};
 
                 super(params);
+
+                this.add_image('forward_car','static/img/pink_car_forward.png', CAR_SCALE, function(){
+                    this.x = WIDTH/2 - this.img.forward_car.sWidth/2;
+                    this.y = HEIGHT - (this.img.forward_car.sHeight + 5);
+                    this.height = this.img.forward_car.sHeight;
+                    this.width = this.img.forward_car.sWidth;
+                }.bind(this));
+                this.add_image('left_car','static/img/pink_car_left.png', CAR_SCALE, function(){});
+                this.add_image('right_car', 'static/img/pink_car_right.png', CAR_SCALE, function(){});
 
                 this.x_speed = 0;
                 this.y_speed = 0;
@@ -99,10 +98,15 @@
 
         class Obstacle extends Entity {
             constructor(params) {
-                params.height = params.img.tree1.sHeight;
-                params.width = params.img.tree1.sWidth;
-
+                params.img = {};
+                const TREE_SCALE = 1;
                 super(params);
+                this.add_image('tree1','static/img/trees/palmtree1.png', TREE_SCALE, function(){
+                    this.height = this.img['tree1'].sHeight;
+                    this.width = this.img['tree1'].sWidth;
+                    this.y = 0 - this.height;
+                }.bind(this));
+
                 this.y_speed = LEVEL_SPEED;
                 this.id = Math.random();
                 Obstacle.list[this.id] = this;
@@ -115,10 +119,14 @@
 
         class Collectible extends Entity {
             constructor(params) {
-                params.height = params.img.pill.sHeight;
-                params.width = params.img.pill.sWidth;
-
+                params.img = {};
+                const PILL_SCALE = 0.2;
                 super(params);
+                this.add_image('pill', 'static/img/pill.png', PILL_SCALE, function(){
+                    this.height = this.img['pill'].sHeight;
+                    this.width = this.img['pill'].sWidth;
+                    this.y = this.height;
+                }.bind(this))
                 this.y_speed = LEVEL_SPEED;
                 this.id = Math.random();
                 Collectible.list[this.id] = this;
@@ -133,57 +141,29 @@
         Collectible.list = {}
         Collectible.flagged_for_deletion = [];
 
-        const obstacle_img = {};
-        obstacle_img.tree1 = new Image();
-        obstacle_img.tree1.src = 'static/img/trees/palmtree1.png';
-        obstacle_img.tree1.sHeight = obstacle_img.tree1.height;
-        obstacle_img.tree1.sWidth = obstacle_img.tree1.width;
-
-        obstacle_img.dancing_tree1 = new Image();
-        obstacle_img.dancing_tree1.src = 'static/img/trees/dancing_palmtree1.gif';
-        obstacle_img.dancing_tree1.sHeight = 0.1;
-        obstacle_img.dancing_tree1.sWidth = 0.1;
-
-        const pill_img = {};
-        pill_img.pill = new Image();
-        pill_img.pill.src = 'static/img/pill.png';
-        pill_img.pill.sHeight = pill_img.pill.height * 0.2;
-        pill_img.pill.sWidth = pill_img.pill.width * 0.2;
-
         const car = new Car({})
 
         class Background{
             constructor(params) {
-                const background_imgs = {};
-                background_imgs.sand1 = new Image();
-                background_imgs.sand1.src = 'static/img/background/sand1.png';
-                background_imgs.sand1.sHeight = background_imgs.sand1.height;
-                background_imgs.sand1.sWidth = background_imgs.sand1.width;
+                const TILE_SCALE = 1;
 
-                background_imgs.sand2 = new Image();
-                background_imgs.sand2.src = 'static/img/background/sand2.png';
-                background_imgs.sand2.sHeight = background_imgs.sand2.height;
-                background_imgs.sand2.sWidth = background_imgs.sand2.width;
-
-                background_imgs.sand3 = new Image();
-                background_imgs.sand3.src = 'static/img/background/sand3.png';
-                background_imgs.sand3.sHeight = background_imgs.sand3.height;
-                background_imgs.sand3.sWidth = background_imgs.sand3.width;
-
-                background_imgs.sand4 = new Image();
-                background_imgs.sand4.src = 'static/img/background/sand4.png';
-                background_imgs.sand4.sHeight = background_imgs.sand4.height;
-                background_imgs.sand4.sWidth = background_imgs.sand4.width;
-
-                this.img = background_imgs;
+                this.img = {};
                 this.background = [];
+                this.add_image('sand1', 'static/img/background/sand1.png', TILE_SCALE, function(){});
+                this.add_image('sand2', 'static/img/background/sand2.png', TILE_SCALE, function(){});
+                this.add_image('sand3', 'static/img/background/sand3.png', TILE_SCALE, function(){});
+                this.add_image('sand4', 'static/img/background/sand4.png', TILE_SCALE, function(){
+                    this.tiles_needed_for_width = WIDTH / (this.img.sand1.width + 1) + 2;
+                    this.tiles_needed_for_height = HEIGHT / (this.img.sand1.height + 1) + 2;
 
-                this.tiles_needed_for_width = WIDTH / (this.img.sand1.width + 1) + 2;
-                this.tiles_needed_for_height = HEIGHT / (this.img.sand1.height + 1) + 2;
+                    for(let i=0; i <= this.tiles_needed_for_height; i++) {
+                        this.background.push(this.create_row(this.tiles_needed_for_width));
+                    }
+                }.bind(this));
 
-                for(let i=0; i <= this.tiles_needed_for_height; i++) {
-                    this.background.push(this.create_row(this.tiles_needed_for_width));
-                }
+
+
+
             }
 
             create_row(length) {
@@ -199,6 +179,16 @@
                     }
                 }
                 return row;
+            }
+
+            add_image(name, path, scale, callback){
+                this.img[name] = new Image();
+                this.img[name].onload = function() {
+                    this.img[name].sHeight = this.img[name].height * scale;
+                    this.img[name].sWidth = this.img[name].width * scale
+                    callback();
+                }.bind(this);
+                this.img[name].src = path;
             }
 
             draw(){
@@ -229,7 +219,7 @@
             const r = Math.random();
             const draw_frequency = 0.1;
             if (r < draw_frequency){
-                new Obstacle({x: r * WIDTH * (1/draw_frequency), y: 0 - obstacle_img.tree1.sHeight, img:obstacle_img})
+                new Obstacle({x: r * WIDTH * (1/draw_frequency)})
             }
             const remove_list = [];
             for (let o_id in Obstacle.list){
@@ -247,7 +237,7 @@
             const r = Math.random();
             const draw_frequency = 0.05;
             if (r < draw_frequency){
-                new Collectible({x: r * WIDTH * (1/draw_frequency), y: 0 - pill_img.pill.sHeight, img:pill_img})
+                new Collectible({x: r * WIDTH * (1/draw_frequency)})
             }
             for (let c_id in Collectible.list){
                 const c = Collectible.list[c_id];
