@@ -1,0 +1,7 @@
+* add collisions
+* add borders
+* wait for load of images
+* finish background updating procedure
+* add point system
+* add combo meter
+* add sound effect for pill collection
