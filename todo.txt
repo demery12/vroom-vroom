@@ -1,7 +1,10 @@
-* add collisions
 * add borders
+* make hit boxes better
+* add sound effect for pill collection
+
+DONE:
 * wait for load of images
+* add collisions
 * finish background updating procedure
 * add point system
 * add combo meter
-* add sound effect for pill collection

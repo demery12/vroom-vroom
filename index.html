@@ -10,13 +10,60 @@
         <source src="static/audio/vroom_vroom.mp3" type="audio/mpeg">
         Your browser does not support the audio element.
     </audio><br />
+
     <script>
         const HEIGHT = 500;
         const WIDTH = 500;
-        let LEVEL_SPEED = 10;
+        let LEVEL_SPEED = 3;
         const ctx = document.getElementById("ctx").getContext("2d");
-        ctx.font = "30px Arial";
+        const FONT_SIZE = 20;
+        ctx.font =  FONT_SIZE + "px Arial";
 
+        let GAME_STATE = "start";
+
+        class Scoreboard {
+            constructor(params) {
+                this.x = 5;
+                this.y = 5;
+                this.meter_width = 60;
+                this.meter_height = 20;
+                this.meter_value = 30;
+                this.decay = 0.25;
+                this.score = 0;
+                this.passive_score_increase = 50;
+                this.combo_multiplier = 1;
+                this.score_ticks = 3;
+                this.grace_period = 70;
+            }
+            draw(){
+                if(this.meter_value <= 0){
+                    console.log("Game Over!");
+                    game_over();
+                } else if (this.grace_period !== 0) {
+                    this.grace_period -= 1;
+                } else {
+                    this.meter_value -= this.decay;
+                }
+                ctx.beginPath();
+                ctx.rect(this.x, this.y, this.meter_width, this.meter_height);
+                ctx.rect(this.x + this.meter_width, this.y, this.meter_width, this.meter_height);
+                ctx.stroke();
+                ctx.fillRect(this.x, this.y, (this.meter_value * (2 * this.meter_width)) / 100, this.meter_height);
+                const score_length = (this.score + "").length;
+                ctx.fillText(this.score+"", WIDTH - (10 + score_length * (FONT_SIZE/2)), this.y + FONT_SIZE)
+
+                if(this.score_ticks === 0){
+                    this.score += this.passive_score_increase * this.combo_multiplier;
+                    this.score_ticks = 3
+                } else {
+                    this.score_ticks -= 1;
+                }
+
+            }
+
+        }
+
+        const scoreboard = new Scoreboard({});
         class Entity {
             constructor(params) {
                 this.x = params.x || 0;
@@ -64,6 +111,7 @@
                 this.max_x_speed = 5;
                 this.max_y_speed = 7;
                 this.car_orientation = 'forward_car';
+                this.scoreboard = params.scoreboard;
             }
             draw(){
                 if (this.x_speed === 0){
@@ -83,12 +131,18 @@
                     const collectible = Collectible.list[collectible_id];
                     if (this.colliding(collectible)){
                         Collectible.flagged_for_deletion.push(collectible_id);
+                        this.scoreboard.meter_value += 10;
+                        this.scoreboard.score += 1000 * this.scoreboard.combo_multiplier;
+                        if(this.scoreboard.meter_value > 100){
+                            this.scoreboard.meter_value = 100;
+                        }
                     }
                 }
                 for(const obstacle_id in Obstacle.list){
                     const obstacle = Obstacle.list[obstacle_id];
                     if (this.colliding(obstacle)){
-                        console.log("Game Over!")
+                        console.log("Game Over!");
+                        game_over();
                     }
                 }
             }
@@ -125,7 +179,7 @@
                 this.add_image('pill', 'static/img/pill.png', PILL_SCALE, function(){
                     this.height = this.img['pill'].sHeight;
                     this.width = this.img['pill'].sWidth;
-                    this.y = this.height;
+                    this.y = 0 - this.height;
                 }.bind(this))
                 this.y_speed = LEVEL_SPEED;
                 this.id = Math.random();
@@ -140,24 +194,22 @@
         Obstacle.list = {};
         Collectible.list = {}
         Collectible.flagged_for_deletion = [];
-
-        const car = new Car({})
+        const car = new Car({scoreboard: scoreboard})
 
         class Background{
             constructor(params) {
                 const TILE_SCALE = 1;
-
                 this.img = {};
                 this.background = [];
                 this.add_image('sand1', 'static/img/background/sand1.png', TILE_SCALE, function(){});
                 this.add_image('sand2', 'static/img/background/sand2.png', TILE_SCALE, function(){});
                 this.add_image('sand3', 'static/img/background/sand3.png', TILE_SCALE, function(){});
                 this.add_image('sand4', 'static/img/background/sand4.png', TILE_SCALE, function(){
-                    this.tiles_needed_for_width = WIDTH / (this.img.sand1.width + 1) + 2;
-                    this.tiles_needed_for_height = HEIGHT / (this.img.sand1.height + 1) + 2;
+                    this.tiles_needed_for_width = WIDTH / (this.img['sand1'].width) + 2;
+                    this.tiles_needed_for_height = HEIGHT / (this.img['sand1'].height) + 2;
 
-                    for(let i=0; i <= this.tiles_needed_for_height; i++) {
-                        this.background.push(this.create_row(this.tiles_needed_for_width));
+                    for(let i=0; i <= this.tiles_needed_for_height; i++){
+                        this.background.push(this.create_row(this.tiles_needed_for_width, (i * this.img['sand1'].height)));
                     }
                 }.bind(this));
 
@@ -166,8 +218,9 @@
 
             }
 
-            create_row(length) {
+            create_row(length, shift) {
                 const row = [];
+                row.row_shift = shift;
                 for(let j=0; j <= length; j++){
                     const r = Math.random();
                     if(r <= 0.7) {
@@ -195,29 +248,37 @@
                 let y_delta = this.img.sand1.height;
                 let y_shift = 0 - y_delta;
                 const int_to_tile = {1:'sand1', 2:'sand2', 3:'sand3', 4:'sand4'};
+                let delete_flag = false;
                 for(const row of this.background){
                     let x_delta = this.img.sand2.width;
                     let x_shift = 0 - x_delta;
-
                     for(const tile_int of row){
                         const img = this.img[int_to_tile[tile_int]];
-                        ctx.drawImage(img, x_shift, y_shift, img.sWidth, img.sHeight);
+                        ctx.drawImage(img, x_shift, row.row_shift, img.sWidth, img.sHeight);
                         x_shift += x_delta;
                     }
                     y_shift += y_delta;
+                    row.row_shift += LEVEL_SPEED;
+                    if(row.row_shift > HEIGHT){
+                        delete_flag = true;
+                    }
                 }
-                this.background.pop();
-                this.background.unshift(this.create_row(this.tiles_needed_for_width));
+
+                if (delete_flag){
+                    this.background.pop();
+                    this.background.unshift(this.create_row(this.tiles_needed_for_width, this.background[0].row_shift - this.img['sand1'].sHeight));
+                }
             }
         }
         const background = new Background({});
+
         function drawBackground(){
             background.draw();
         }
 
         function drawObstacles(){
             const r = Math.random();
-            const draw_frequency = 0.1;
+            const draw_frequency = 0.01;
             if (r < draw_frequency){
                 new Obstacle({x: r * WIDTH * (1/draw_frequency)})
             }
@@ -255,15 +316,36 @@
             car.draw()
         }
 
-        // update loop
-        setInterval(function(){
-            ctx.clearRect(0,0,500,500);
-            drawBackground();
-            drawObstacles();
-            drawCollectibles();
-            drawPlayer();
+        function drawHud(){
+            scoreboard.draw();
+        }
 
-        }, 40)
+        function game_over(){
+            GAME_STATE = "game_over"
+        }
+
+        function draw_game_over(){
+            const end_text = "Game Over!"
+            ctx.fillText(end_text, WIDTH/2 - (end_text.length * (FONT_SIZE/2)) / 2, HEIGHT/2 - FONT_SIZE/2)
+        }
+        // update loop
+        let game_loop = setInterval(function(){
+            if(GAME_STATE === "game_over"){
+                draw_game_over();
+                clearInterval(game_loop);
+
+            } else if (GAME_STATE === "play"){
+                ctx.clearRect(0,0, WIDTH, HEIGHT);
+                drawBackground();
+                drawCollectibles();
+                drawPlayer();
+                drawObstacles();
+                drawHud();
+            } else if (GAME_STATE === "start"){
+                GAME_STATE = "play";
+            }
+
+        }, 20)
 
         document.onkeydown = function (event) {
             if (event.code === 'KeyD') //d
