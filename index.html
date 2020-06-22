@@ -6,7 +6,7 @@
 </head>
 <body>
     <canvas id="ctx" width="500" height="500" style="border:1px solid #000000;"></canvas>
-    <audio loop preload="metadata" style=" width:300px;">
+    <audio loop autoplay preload="metadata" style=" width:300px;">
         <source src="static/audio/vroom_vroom.mp3" type="audio/mpeg">
         Your browser does not support the audio element.
     </audio><br />
@@ -34,6 +34,10 @@
                 this.combo_multiplier = 1;
                 this.score_ticks = 3;
                 this.grace_period = 70;
+                this.full_combo_countdown = 300;
+                this.combo_countdown = this.full_combo_countdown;
+                this.combo_max = 5;
+
             }
             draw(){
                 if(this.meter_value <= 0){
@@ -49,6 +53,7 @@
                 ctx.rect(this.x + this.meter_width, this.y, this.meter_width, this.meter_height);
                 ctx.stroke();
                 ctx.fillRect(this.x, this.y, (this.meter_value * (2 * this.meter_width)) / 100, this.meter_height);
+                ctx.fillText("Combo: x"+this.combo_multiplier, this.x, this.y + this.meter_height + FONT_SIZE + 5)
                 const score_length = (this.score + "").length;
                 ctx.fillText(this.score+"", WIDTH - (10 + score_length * (FONT_SIZE/2)), this.y + FONT_SIZE)
 
@@ -57,6 +62,16 @@
                     this.score_ticks = 3
                 } else {
                     this.score_ticks -= 1;
+                }
+
+                if(this.combo_countdown === 0){
+                    this.combo_multiplier = Math.min(this.combo_multiplier + 1, this.combo_max);
+                    this.combo_countdown = this.full_combo_countdown;
+                } else if (this.meter_value >= 50) {
+                    this.combo_countdown -= 1;
+                } else {
+                    this.combo_countdown = this.full_combo_countdown;
+                    this.combo_multiplier = 1;
                 }
 
             }
@@ -98,10 +113,10 @@
                 super(params);
 
                 this.add_image('forward_car','static/img/pink_car_forward.png', CAR_SCALE, function(){
-                    this.x = WIDTH/2 - this.img.forward_car.sWidth/2;
-                    this.y = HEIGHT - (this.img.forward_car.sHeight + 5);
-                    this.height = this.img.forward_car.sHeight;
-                    this.width = this.img.forward_car.sWidth;
+                    this.x = WIDTH/2 - this.img['forward_car'].sWidth/2;
+                    this.y = HEIGHT - (this.img['forward_car'].sHeight + 5);
+                    this.height = this.img['forward_car'].sHeight;
+                    this.width = this.img['forward_car'].sWidth;
                 }.bind(this));
                 this.add_image('left_car','static/img/pink_car_left.png', CAR_SCALE, function(){});
                 this.add_image('right_car', 'static/img/pink_car_right.png', CAR_SCALE, function(){});
@@ -118,13 +133,26 @@
                     this.car_orientation = 'forward_car';
                 } else if (this.x_speed > 0) {
                     this.car_orientation = 'right_car';
-                } else {
-                    this.car_orientation = 'left_car';
+                  } else {
+                  this.car_orientation = 'left_car';
                 }
                 this.detect_collision()
                 ctx.drawImage(this.img[this.car_orientation], this.x, this.y, this.img[this.car_orientation].sWidth, this.img[this.car_orientation].sHeight);
+
                 this.y += this.y_speed;
+                if (this.y <= 0){
+                    this.y = 2;
+                } else if (this.y >= HEIGHT){
+                    this.y = HEIGHT - this.height/2;
+                }
                 this.x += this.x_speed;
+                if(this.x <= 0){
+                    this.x = 2;
+                }
+                if(this.x >= WIDTH - this.width){
+                    this.x = (WIDTH - this.width) - 2;
+                }
+
             }
             detect_collision(){
                 for(const collectible_id in Collectible.list){

@@ -1,6 +1,12 @@
-* add borders
 * make hit boxes better
 * add sound effect for pill collection
+* add psychedelic overlay
+* add instructions/start page
+* add ability to restart game
+* guarantee music loads
+* driving noises
+* crashing noises
+* host online
 
 DONE:
 * wait for load of images
