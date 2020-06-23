@@ -1,12 +1,14 @@
-* make hit boxes better
+* change game start to use initialization method
+* add instructions/start page
+* guarantee music loads
+* improve controls for button holds
+* host online
+
 * add sound effect for pill collection
 * add psychedelic overlay
-* add instructions/start page
-* add ability to restart game
-* guarantee music loads
 * driving noises
 * crashing noises
-* host online
+
 
 DONE:
 * wait for load of images
@@ -14,3 +16,5 @@ DONE:
 * finish background updating procedure
 * add point system
 * add combo meter
+* make hit boxes better
+* add ability to restart game

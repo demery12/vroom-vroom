@@ -16,10 +16,13 @@
         const WIDTH = 500;
         let LEVEL_SPEED = 3;
         const ctx = document.getElementById("ctx").getContext("2d");
+        const canvas = document.getElementById("ctx");
         const FONT_SIZE = 20;
-        ctx.font =  FONT_SIZE + "px Arial";
+        const FONT_NAME = 'Arial';
+        ctx.font =  FONT_SIZE + "px " + FONT_NAME;
 
         let GAME_STATE = "start";
+        const DRAW_HITBOXES = false;
 
         class Scoreboard {
             constructor(params) {
@@ -48,6 +51,7 @@
                 } else {
                     this.meter_value -= this.decay;
                 }
+                ctx.fillStyle = 'black';
                 ctx.beginPath();
                 ctx.rect(this.x, this.y, this.meter_width, this.meter_height);
                 ctx.rect(this.x + this.meter_width, this.y, this.meter_width, this.meter_height);
@@ -78,20 +82,24 @@
 
         }
 
-        const scoreboard = new Scoreboard({});
+        let scoreboard = new Scoreboard({});
         class Entity {
             constructor(params) {
                 this.x = params.x || 0;
                 this.y = params.y || 0;
                 this.img = params.img || null;
-                this.height = params.height;
-                this.width = params.width;
+                this.height = params.height || 0;
+                this.width = params.width || 0;
+                this.hitbox_x = params.hitbox_x || 0;
+                this.hitbox_y = params.hitbox_y || 0;
+                this.hitbox_height = params.hitbox_height || 0;
+                this.hitbox_width = params.hitbox_width || 0;
             }
             colliding(entity){
-                return this.x <= (entity.x + entity.width) &&
-                    this.x + this.width > entity.x &&
-                    this.y <= (entity.y + entity.height) &&
-                    this.y + this.height > entity.y;
+                return this.hitbox_x <= (entity.hitbox_x + entity.hitbox_width) &&
+                    this.hitbox_x + this.hitbox_width > entity.hitbox_x &&
+                    this.hitbox_y <= (entity.hitbox_y + entity.hitbox_height) &&
+                    this.hitbox_y + this.hitbox_height > entity.hitbox_y;
             }
             add_image(name, path, scale, callback){
                 this.img[name] = new Image();
@@ -101,6 +109,10 @@
                     callback();
                 }.bind(this);
                 this.img[name].src = path;
+            }
+            draw_hitbox(){
+                ctx.fillStyle = 'rgba(215, 50, 50, 0.50)';
+                ctx.fillRect(this.hitbox_x, this.hitbox_y, this.hitbox_width, this.hitbox_height);
             }
         }
 
@@ -117,6 +129,10 @@
                     this.y = HEIGHT - (this.img['forward_car'].sHeight + 5);
                     this.height = this.img['forward_car'].sHeight;
                     this.width = this.img['forward_car'].sWidth;
+                    this.hitbox_height = this.height;
+                    this.hitbox_width = this.width;
+                    this.hitbox_x = this.x;
+                    this.hitbox_y = this.y;
                 }.bind(this));
                 this.add_image('left_car','static/img/pink_car_left.png', CAR_SCALE, function(){});
                 this.add_image('right_car', 'static/img/pink_car_right.png', CAR_SCALE, function(){});
@@ -152,6 +168,8 @@
                 if(this.x >= WIDTH - this.width){
                     this.x = (WIDTH - this.width) - 2;
                 }
+                this.hitbox_x = this.x;
+                this.hitbox_y = this.y;
 
             }
             detect_collision(){
@@ -186,7 +204,11 @@
                 this.add_image('tree1','static/img/trees/palmtree1.png', TREE_SCALE, function(){
                     this.height = this.img['tree1'].sHeight;
                     this.width = this.img['tree1'].sWidth;
+                    this.hitbox_height = this.height / 3;
+                    this.hitbox_width = this.width / 3;
                     this.y = 0 - this.height;
+                    this.hitbox_y = (this.y + this.height) - this.hitbox_height - 2;
+                    this.hitbox_x = (this.x + this.width/2) - (this.hitbox_width / 2) - 5; // this is a little 'fine tuned'
                 }.bind(this));
 
                 this.y_speed = LEVEL_SPEED;
@@ -196,6 +218,7 @@
             draw(){
                 ctx.drawImage(this.img.tree1, this.x, this.y, this.img.tree1.sWidth, this.img.tree1.sHeight);
                 this.y += this.y_speed;
+                this.hitbox_y = (this.y + this.height) - this.hitbox_height - 2;
             }
         }
 
@@ -204,10 +227,14 @@
                 params.img = {};
                 const PILL_SCALE = 0.2;
                 super(params);
-                this.add_image('pill', 'static/img/pill.png', PILL_SCALE, function(){
+                this.add_image('pill', 'static/img/cropped_pill.png', PILL_SCALE, function(){
                     this.height = this.img['pill'].sHeight;
                     this.width = this.img['pill'].sWidth;
+                    this.hitbox_height = this.height;
+                    this.hitbox_width = this.width;
                     this.y = 0 - this.height;
+                    this.hitbox_y = this.y;
+                    this.hitbox_x = this.x;
                 }.bind(this))
                 this.y_speed = LEVEL_SPEED;
                 this.id = Math.random();
@@ -216,13 +243,14 @@
             draw(){
                 ctx.drawImage(this.img.pill, this.x, this.y, this.img.pill.sWidth, this.img.pill.sHeight);
                 this.y += this.y_speed;
+                this.hitbox_y = this.y;
             }
         }
 
         Obstacle.list = {};
         Collectible.list = {}
         Collectible.flagged_for_deletion = [];
-        const car = new Car({scoreboard: scoreboard})
+        let car = new Car({scoreboard: scoreboard})
 
         class Background{
             constructor(params) {
@@ -240,6 +268,7 @@
                         this.background.push(this.create_row(this.tiles_needed_for_width, (i * this.img['sand1'].height)));
                     }
                 }.bind(this));
+
 
 
 
@@ -298,7 +327,7 @@
                 }
             }
         }
-        const background = new Background({});
+        let background = new Background({});
 
         function drawBackground(){
             background.draw();
@@ -314,6 +343,9 @@
             for (let o_id in Obstacle.list){
                 const o = Obstacle.list[o_id];
                 o.draw();
+                if(DRAW_HITBOXES){
+                    o.draw_hitbox();
+                }
                 if (o.y > HEIGHT + 5){
                     remove_list.push(o.id);
                 }
@@ -331,6 +363,9 @@
             for (let c_id in Collectible.list){
                 const c = Collectible.list[c_id];
                 c.draw();
+                if(DRAW_HITBOXES){
+                    c.draw_hitbox();
+                }
                 if (c.y > HEIGHT + 5){
                     Collectible.flagged_for_deletion.push(c.id);
                 }
@@ -342,6 +377,9 @@
 
         function drawPlayer(){
             car.draw()
+            if(DRAW_HITBOXES){
+                car.draw_hitbox();
+            }
         }
 
         function drawHud(){
@@ -356,24 +394,39 @@
             const end_text = "Game Over!"
             ctx.fillText(end_text, WIDTH/2 - (end_text.length * (FONT_SIZE/2)) / 2, HEIGHT/2 - FONT_SIZE/2)
         }
+
+        function draw_start_screen(){
+            const start_button = {height: 40, width: 100};
+            // ctx.fillStyle = 'green';
+            // ctx.fillRect(WIDTH/2 - start_button.width/2, HEIGHT/2 - start_button.height/2, start_button.width, start_button.height);
+            ctx.fillStyle = 'black';
+            const start_text = "Click anywhere to start";
+            ctx.fillText(start_text, WIDTH/2 - ctx.measureText(start_text).width/2, HEIGHT/2 - ctx.measureText('M').width/2);
+        }
+
+        draw_start_screen();
+
         // update loop
-        let game_loop = setInterval(function(){
-            if(GAME_STATE === "game_over"){
-                draw_game_over();
-                clearInterval(game_loop);
+        function game_loop() {
+            console.log("running game loop");
+            let loop = setInterval(function(){
+                if(GAME_STATE === "game_over"){
+                    draw_game_over();
+                    clearInterval(loop);
 
-            } else if (GAME_STATE === "play"){
-                ctx.clearRect(0,0, WIDTH, HEIGHT);
-                drawBackground();
-                drawCollectibles();
-                drawPlayer();
-                drawObstacles();
-                drawHud();
-            } else if (GAME_STATE === "start"){
-                GAME_STATE = "play";
-            }
+                } else if (GAME_STATE === "play"){
+                    ctx.clearRect(0,0, WIDTH, HEIGHT);
+                    drawBackground();
+                    drawCollectibles();
+                    drawPlayer();
+                    drawObstacles();
+                    drawHud();
+                } else if (GAME_STATE === "start"){
+                    draw_start_screen();
+                }
 
-        }, 20)
+            }, 20);
+        }
 
         document.onkeydown = function (event) {
             if (event.code === 'KeyD') //d
@@ -395,6 +448,33 @@
                 car.x_speed = 0;
             else if (event.code === 'KeyW') //w
                 car.y_speed = 0;
+        }
+
+        canvas.onclick = function(event){
+            if(GAME_STATE === 'start'){
+                console.log("clicked start")
+                GAME_STATE = 'play';
+                game_loop();
+            } else if (GAME_STATE === 'game_over'){
+                console.log("clicked restart");
+                GAME_STATE = 'play';
+                const init_pack = initialize_game();
+                scoreboard = init_pack['scoreboard'];
+                car = init_pack['car'];
+                background = init_pack['background'];
+                game_loop();
+            }
+        }
+
+        function initialize_game(){
+            const object_pack = {}
+            const scoreboard = new Scoreboard({});
+            object_pack['scoreboard'] = scoreboard;
+            object_pack['car'] = new Car({scoreboard: scoreboard})
+            object_pack['background'] = new Background({});
+            Obstacle.list = {};
+            Collectible.list = {};
+            return object_pack
         }
 
     </script>
