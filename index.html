@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>Vroom Vroom</title>
+    <link rel="shortcut icon"
+ href="static/img/favicon.png">
 </head>
 <body>
     <canvas id="ctx" width="500" height="500" style="border:1px solid #000000;"></canvas>
-    <audio loop autoplay preload="metadata" style=" width:300px;">
+    <audio loop preload="metadata" style=" width:300px;" id="music" >
         <source src="static/audio/vroom_vroom.mp3" type="audio/mpeg">
         Your browser does not support the audio element.
     </audio><br />
@@ -130,8 +132,8 @@
                     this.height = this.img['forward_car'].sHeight;
                     this.width = this.img['forward_car'].sWidth;
                     this.hitbox_height = this.height;
-                    this.hitbox_width = this.width;
-                    this.hitbox_x = this.x;
+                    this.hitbox_width = this.width - 16;
+                    this.hitbox_x = this.x + 8;
                     this.hitbox_y = this.y;
                 }.bind(this));
                 this.add_image('left_car','static/img/pink_car_left.png', CAR_SCALE, function(){});
@@ -168,7 +170,7 @@
                 if(this.x >= WIDTH - this.width){
                     this.x = (WIDTH - this.width) - 2;
                 }
-                this.hitbox_x = this.x;
+                this.hitbox_x = this.x + 8;
                 this.hitbox_y = this.y;
 
             }
@@ -254,25 +256,24 @@
 
         class Background{
             constructor(params) {
-                const TILE_SCALE = 1;
+                this.TILE_SCALE = 1;
                 this.img = {};
                 this.background = [];
-                this.add_image('sand1', 'static/img/background/sand1.png', TILE_SCALE, function(){});
-                this.add_image('sand2', 'static/img/background/sand2.png', TILE_SCALE, function(){});
-                this.add_image('sand3', 'static/img/background/sand3.png', TILE_SCALE, function(){});
-                this.add_image('sand4', 'static/img/background/sand4.png', TILE_SCALE, function(){
-                    this.tiles_needed_for_width = WIDTH / (this.img['sand1'].width) + 2;
-                    this.tiles_needed_for_height = HEIGHT / (this.img['sand1'].height) + 2;
 
-                    for(let i=0; i <= this.tiles_needed_for_height; i++){
-                        this.background.push(this.create_row(this.tiles_needed_for_width, (i * this.img['sand1'].height)));
-                    }
-                }.bind(this));
+            }
+            async init(){
+                await this.add_image('sand1', 'static/img/background/sand1.png')
 
+                this.tiles_needed_for_width = WIDTH / (this.img['sand1'].width) + 2;
+                this.tiles_needed_for_height = HEIGHT / (this.img['sand1'].height) + 2;                        
 
+                for(let i=0; i <= this.tiles_needed_for_height; i++){
+                    this.background.push(this.create_row(this.tiles_needed_for_width, (i * this.img['sand1'].height)));
+                }
 
-
-
+                await this.add_image('sand2', 'static/img/background/sand2.png');
+                await this.add_image('sand3', 'static/img/background/sand3.png');
+                await this.add_image('sand4', 'static/img/background/sand4.png');
             }
 
             create_row(length, shift) {
@@ -291,14 +292,18 @@
                 return row;
             }
 
-            add_image(name, path, scale, callback){
-                this.img[name] = new Image();
-                this.img[name].onload = function() {
-                    this.img[name].sHeight = this.img[name].height * scale;
-                    this.img[name].sWidth = this.img[name].width * scale
-                    callback();
-                }.bind(this);
-                this.img[name].src = path;
+            add_image(name, path){
+                return new Promise((resolve, reject) => {
+                    this.img[name] = new Image();
+                    this.img[name].onload = () => {
+                        this.img[name].sHeight = this.img[name].height * this.TILE_SCALE;
+                        this.img[name].sWidth = this.img[name].width * this.TILE_SCALE;
+                        resolve(this.img[name].height)
+                    }
+                    this.img.onerror = reject;
+                    this.img[name].src = path;
+                });
+
             }
 
             draw(){
@@ -327,7 +332,7 @@
                 }
             }
         }
-        let background = new Background({});
+        let background;
 
         function drawBackground(){
             background.draw();
@@ -399,13 +404,38 @@
             const start_button = {height: 40, width: 100};
             // ctx.fillStyle = 'green';
             // ctx.fillRect(WIDTH/2 - start_button.width/2, HEIGHT/2 - start_button.height/2, start_button.width, start_button.height);
+            console.log(background);
+            drawBackground();
+            const logo = new Image();
+            logo.onload = () => {
+                logo.sHeight = logo.height * 0.5;
+                logo.sWidth = logo.width * 0.5;
+                ctx.drawImage(logo, WIDTH/2 - logo.sWidth/2, 60, logo.sWidth, logo.sHeight);
+            }
+            logo.src = 'static/img/logo.png';
+
             ctx.fillStyle = 'black';
             const start_text = "Click anywhere to start";
-            ctx.fillText(start_text, WIDTH/2 - ctx.measureText(start_text).width/2, HEIGHT/2 - ctx.measureText('M').width/2);
+            let text_height = ctx.measureText('M').width;
+            ctx.fillText(start_text, WIDTH/2 - ctx.measureText(start_text).width/2, HEIGHT/2 - text_height/2);
+            const instructions = ["Instructions:", "WASD to steer. Steer clear of obstacles!", "Maintain a healthy dosage of pills to increase your combo.", "If the pill meter runs out, the game is over!"];
+            ctx.font = "15px " + FONT_NAME;
+            text_height = ctx.measureText('M').width;
+            for(let i=0; i<instructions.length; i++){
+                extra_padding = i===0 ? 0 : 5/i;
+                ctx.fillText(instructions[i], 10, HEIGHT/2 + 50 + i*(text_height + 5) );
+            }
+            ctx.font =  FONT_SIZE + "px " + FONT_NAME;
         }
-
-        draw_start_screen();
-
+        async function start_game(){
+            const init_pack = await initialize_game();
+            scoreboard = init_pack['scoreboard'];
+            car = init_pack['car'];
+            background = init_pack['background'];
+            const music = init_pack['music'];
+            draw_start_screen();
+        }
+        start_game();
         // update loop
         function game_loop() {
             console.log("running game loop");
@@ -423,6 +453,7 @@
                     drawHud();
                 } else if (GAME_STATE === "start"){
                     draw_start_screen();
+                    clearInterval(loop);
                 }
 
             }, 20);
@@ -450,28 +481,30 @@
                 car.y_speed = 0;
         }
 
-        canvas.onclick = function(event){
-            if(GAME_STATE === 'start'){
-                console.log("clicked start")
+        canvas.onclick = async function(event){
+            if(GAME_STATE === 'start' || GAME_STATE === 'game_over'){
+                console.log("Game is starting");
                 GAME_STATE = 'play';
-                game_loop();
-            } else if (GAME_STATE === 'game_over'){
-                console.log("clicked restart");
-                GAME_STATE = 'play';
-                const init_pack = initialize_game();
+                const init_pack = await initialize_game();
                 scoreboard = init_pack['scoreboard'];
                 car = init_pack['car'];
                 background = init_pack['background'];
+                const music = init_pack['music'];
+                console.log(init_pack);
+                music.play();
                 game_loop();
             }
         }
 
-        function initialize_game(){
+        async function initialize_game(){
             const object_pack = {}
             const scoreboard = new Scoreboard({});
+            object_pack['background'] = new Background({});
+            await object_pack['background'].init();
+            console.log(object_pack['background']);
             object_pack['scoreboard'] = scoreboard;
             object_pack['car'] = new Car({scoreboard: scoreboard})
-            object_pack['background'] = new Background({});
+            object_pack['music'] = document.getElementById('music');
             Obstacle.list = {};
             Collectible.list = {};
             return object_pack
