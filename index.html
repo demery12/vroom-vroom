@@ -340,7 +340,7 @@
 
         function drawObstacles(){
             const r = Math.random();
-            const draw_frequency = 0.01;
+            const draw_frequency = 0.02;
             if (r < draw_frequency){
                 new Obstacle({x: r * WIDTH * (1/draw_frequency)})
             }
@@ -399,6 +399,22 @@
             const end_text = "Game Over!"
             ctx.fillText(end_text, WIDTH/2 - (end_text.length * (FONT_SIZE/2)) / 2, HEIGHT/2 - FONT_SIZE/2)
         }
+        function updatePlayer(){
+                // left right
+                if (keyboard_map['KeyD'] && keyboard_map['KeyA'] || !(keyboard_map['KeyD'] || keyboard_map['KeyA'])) // if both or neither are pressed
+                    car.x_speed = 0
+                else if (keyboard_map['KeyD'])
+                    car.x_speed = car.max_x_speed;
+                else if (keyboard_map['KeyA'])
+                    car.x_speed = -car.max_x_speed;
+                // up down
+                if (keyboard_map['KeyS'] && keyboard_map['KeyW'] || !(keyboard_map['KeyS'] || keyboard_map['KeyW'])) // if both or neither are pressed
+                    car.y_speed = 0;
+                else if (keyboard_map['KeyS'])
+                    car.y_speed = car.max_y_speed;
+                else if (keyboard_map['KeyW'])
+                    car.y_speed = -car.max_y_speed;
+        }
 
         function draw_start_screen(){
             const start_button = {height: 40, width: 100};
@@ -446,6 +462,7 @@
 
                 } else if (GAME_STATE === "play"){
                     ctx.clearRect(0,0, WIDTH, HEIGHT);
+                    updatePlayer();
                     drawBackground();
                     drawCollectibles();
                     drawPlayer();
@@ -459,26 +476,12 @@
             }, 20);
         }
 
-        document.onkeydown = function (event) {
-            if (event.code === 'KeyD') //d
-                car.x_speed = car.max_x_speed;
-            else if (event.code === 'KeyS') //s
-                car.y_speed = car.max_y_speed
-            else if (event.code === 'KeyA') //a
-                car.x_speed = -car.max_x_speed;
-            else if (event.code === 'KeyW') //w
-                car.y_speed = -car.max_y_speed
-        }
+        const keyboard_map = {};
 
-        document.onkeyup = function (event) {
-            if (event.code === 'KeyD') //d
-                car.x_speed = 0;
-            else if (event.code === 'KeyS') //s
-                car.y_speed = 0;
-            else if (event.code === 'KeyA') //a
-                car.x_speed = 0;
-            else if (event.code === 'KeyW') //w
-                car.y_speed = 0;
+        onkeydown = onkeyup = function(e){
+            e = e || event; // to deal with IE
+            keyboard_map[e.code] = e.type == 'keydown';
+            // console.log(JSON.stringify(keyboard_map));
         }
 
         canvas.onclick = async function(event){
