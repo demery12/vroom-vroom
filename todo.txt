@@ -1,8 +1,6 @@
-* improve controls for button holds
-* host online
 
 * add sound effect for pill collection
-* add psychedelic overlay
+* add psychedelic overlay (seagulls, dolphins)
 * driving noises
 * crashing noises
 * honk when you press space
@@ -19,3 +17,7 @@ DONE:
 * change game start to use initialization method
 * guarantee music loads
 * add instructions/start page
+* improve controls for button holds
+* host online
+* refactor entity to split into hittable and non hitables
+* add psychedelic overlay (blue bikini)

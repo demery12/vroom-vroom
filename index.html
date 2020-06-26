@@ -96,16 +96,6 @@
                 this.img = params.img || null;
                 this.height = params.height || 0;
                 this.width = params.width || 0;
-                this.hitbox_x = params.hitbox_x || 0;
-                this.hitbox_y = params.hitbox_y || 0;
-                this.hitbox_height = params.hitbox_height || 0;
-                this.hitbox_width = params.hitbox_width || 0;
-            }
-            colliding(entity){
-                return this.hitbox_x <= (entity.hitbox_x + entity.hitbox_width) &&
-                    this.hitbox_x + this.hitbox_width > entity.hitbox_x &&
-                    this.hitbox_y <= (entity.hitbox_y + entity.hitbox_height) &&
-                    this.hitbox_y + this.hitbox_height > entity.hitbox_y;
             }
             add_image(name, path, scale, callback){
                 this.img[name] = new Image();
@@ -116,13 +106,31 @@
                 }.bind(this);
                 this.img[name].src = path;
             }
+        }
+
+        class Collidable extends Entity {
+            constructor(params){
+                super(params)
+                this.hitbox_x = params.hitbox_x || 0;
+                this.hitbox_y = params.hitbox_y || 0;
+                this.hitbox_height = params.hitbox_height || 0;
+                this.hitbox_width = params.hitbox_width || 0;
+            }
+
+            colliding(collidable){
+                return this.hitbox_x <= (collidable.hitbox_x + collidable.hitbox_width) &&
+                    this.hitbox_x + this.hitbox_width > collidable.hitbox_x &&
+                    this.hitbox_y <= (collidable.hitbox_y + collidable.hitbox_height) &&
+                    this.hitbox_y + this.hitbox_height > collidable.hitbox_y;
+            }
+
             draw_hitbox(){
                 ctx.fillStyle = 'rgba(215, 50, 50, 0.50)';
                 ctx.fillRect(this.hitbox_x, this.hitbox_y, this.hitbox_width, this.hitbox_height);
             }
         }
 
-        class Car extends Entity {
+        class Car extends Collidable {
             constructor(params) {
                 const CAR_SCALE = 0.04;
 
@@ -202,7 +210,7 @@
         }
 
 
-        class Obstacle extends Entity {
+        class Obstacle extends Collidable {
             constructor(params) {
                 params.img = {};
                 const TREE_SCALE = 1;
@@ -228,7 +236,7 @@
             }
         }
 
-        class Collectible extends Entity {
+        class Collectible extends Collidable {
             constructor(params) {
                 params.img = {};
                 const PILL_SCALE = 0.10;
@@ -347,11 +355,15 @@
                 this.strobe_rate = 20;
                 this.strobe_counter = 0;
                 this.strobe_selector = 1;
+                this.vision_rate = 50;
+                this.vision_counter = 0;
+                this.active_visions = {};
             }
 
             async init(){
                 await this.add_image("lights1","static/img/lights1.png");
                 await this.add_image("lights2", "static/img/lights2.png");
+                await this.add_image("bikini", "static/img/psychodelics/pixel_blue_bikini_trim.png")
             }
 
             add_image(name, path){
@@ -379,7 +391,51 @@
                 ctx.save();
                 ctx.globalAlpha = this.transparency;
                 ctx.drawImage(this.img['lights'+this.strobe_selector], 0, 0);
+                this.draw_visions();
                 ctx.restore();
+            }
+
+            create_vision(img_to_use){
+                let new_vision = {
+                    vision_id: Math.random(),
+                    img: this.img[img_to_use],
+                    x: Math.random() * WIDTH
+                };
+                const r = Math.random();
+                let vision_scale;
+                if(r<0.60){
+                    vision_scale = 0.3;
+                } else if(r<0.9){
+                    vision_scale = 0.5;
+                } else {
+                    vision_scale = 1;
+                }
+                new_vision["scale"] = vision_scale;
+                new_vision["y"] = 0 - new_vision.img.height * vision_scale;
+                this.active_visions[new_vision.vision_id] = new_vision;
+            }
+            draw_visions(){
+                if(this.vision_counter === this.vision_rate){
+                    this.create_vision('bikini');
+                    this.vision_counter = 0;
+                } else {
+                    this.vision_counter += 1
+                }
+                const to_remove = [];
+                for(const vision_id in this.active_visions){
+                    const vision = this.active_visions[vision_id];
+                    const sHeight = vision.img.height * vision.scale;
+                    const sWidth = vision.img.width * vision.scale; 
+                    ctx.drawImage(vision.img, vision.x, vision.y, sWidth, sHeight)
+                    vision.y += LEVEL_SPEED;
+                    if(vision.y > HEIGHT){
+                        to_remove.push(vision.id);
+                    }
+                }
+                for(const vision_id of to_remove){
+                    delete this.active_visions[vision_id];
+                }
+
             }
 
         }
