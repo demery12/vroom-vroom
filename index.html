@@ -404,11 +404,11 @@
                 const r = Math.random();
                 let vision_scale;
                 if(r<0.60){
-                    vision_scale = 0.3;
-                } else if(r<0.9){
                     vision_scale = 0.5;
-                } else {
+                } else if(r<0.9){
                     vision_scale = 1;
+                } else {
+                    vision_scale = 2;
                 }
                 new_vision["scale"] = vision_scale;
                 new_vision["y"] = 0 - new_vision.img.height * vision_scale;
