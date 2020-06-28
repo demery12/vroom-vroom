@@ -12,7 +12,7 @@
         <source src="static/audio/vroom_vroom.mp3" type="audio/mpeg">
         Your browser does not support the audio element.
     </audio><br />
-
+    <button id='hitbox_toggle'>Toggle hitboxes</button>
     <script>
         const HEIGHT = 500;
         const WIDTH = 500;
@@ -24,8 +24,11 @@
         ctx.font =  FONT_SIZE + "px " + FONT_NAME;
 
         let GAME_STATE = "start";
-        const DRAW_HITBOXES = false;
-
+        let DRAW_HITBOXES = false;
+        const hitbox_toggle = document.getElementById("hitbox_toggle");
+        hitbox_toggle.onclick = function(){
+            DRAW_HITBOXES = !DRAW_HITBOXES;
+        }
         let background;
         let car;
         let scoreboard;
@@ -133,20 +136,21 @@
         class Car extends Collidable {
             constructor(params) {
                 const CAR_SCALE = 0.04;
-
                 params.img = {};
 
                 super(params);
+                this.hitbox_height_tuning = 10;
+                this.hitbox_width_tuning = 16;
 
                 this.add_image('forward_car','static/img/pink_car_forward.png', CAR_SCALE, function(){
                     this.x = WIDTH/2 - this.img['forward_car'].sWidth/2;
                     this.y = HEIGHT - (this.img['forward_car'].sHeight + 5);
                     this.height = this.img['forward_car'].sHeight;
                     this.width = this.img['forward_car'].sWidth;
-                    this.hitbox_height = this.height;
-                    this.hitbox_width = this.width - 16;
-                    this.hitbox_x = this.x + 8;
-                    this.hitbox_y = this.y;
+                    this.hitbox_height = this.height - this.hitbox_height_tuning;
+                    this.hitbox_width = this.width - this.hitbox_width_tuning;
+                    this.hitbox_x = this.x + this.hitbox_width_tuning/2;
+                    this.hitbox_y = this.y + this.hitbox_height_tuning/2;
                 }.bind(this));
                 this.add_image('left_car','static/img/pink_car_left.png', CAR_SCALE, function(){});
                 this.add_image('right_car', 'static/img/pink_car_right.png', CAR_SCALE, function(){});
@@ -182,8 +186,8 @@
                 if(this.x >= WIDTH - this.width){
                     this.x = (WIDTH - this.width) - 2;
                 }
-                this.hitbox_x = this.x + 8;
-                this.hitbox_y = this.y;
+                this.hitbox_x = this.x + this.hitbox_width_tuning/2;
+                this.hitbox_y = this.y + this.hitbox_height_tuning/2;
 
             }
             detect_collision(){
@@ -215,14 +219,16 @@
                 params.img = {};
                 const TREE_SCALE = 1;
                 super(params);
+                this.hitbox_height_tuning = 10;
+                this.hitbox_width_tuning = 10;
                 this.add_image('tree1','static/img/trees/palmtree1.png', TREE_SCALE, function(){
                     this.height = this.img['tree1'].sHeight;
                     this.width = this.img['tree1'].sWidth;
-                    this.hitbox_height = this.height / 3;
-                    this.hitbox_width = this.width / 3;
+                    this.hitbox_height = this.height / 3 - this.hitbox_height_tuning;
+                    this.hitbox_width = this.width / 3 - this.hitbox_width_tuning;
                     this.y = 0 - this.height;
-                    this.hitbox_y = (this.y + this.height) - this.hitbox_height - 2;
-                    this.hitbox_x = (this.x + this.width/2) - (this.hitbox_width / 2) - 5; // this is a little 'fine tuned'
+                    this.hitbox_y = (this.y + this.height) - this.hitbox_height - 4;
+                    this.hitbox_x = (this.x + this.width/2) - (this.hitbox_width / 2) - 10; // this is a little 'fine tuned'
                 }.bind(this));
 
                 this.y_speed = LEVEL_SPEED;
@@ -232,7 +238,7 @@
             draw(){
                 ctx.drawImage(this.img.tree1, this.x, this.y, this.img.tree1.sWidth, this.img.tree1.sHeight);
                 this.y += this.y_speed;
-                this.hitbox_y = (this.y + this.height) - this.hitbox_height - 2;
+                this.hitbox_y = (this.y + this.height) - this.hitbox_height - 4;
             }
         }
 
@@ -358,12 +364,17 @@
                 this.vision_rate = 50;
                 this.vision_counter = 0;
                 this.active_visions = {};
+                this.vision_switch_rate = 1000;
+                this.vision_switch_counter = 0;
+                this.visions = ['bikini', 'slug'];
+                this.vision_index = 0;
             }
 
             async init(){
                 await this.add_image("lights1","static/img/lights1.png");
                 await this.add_image("lights2", "static/img/lights2.png");
                 await this.add_image("bikini", "static/img/psychodelics/pixel_blue_bikini_trim.png")
+                await this.add_image("slug","static/img/slug_down.png" )
             }
 
             add_image(name, path){
@@ -415,12 +426,19 @@
                 this.active_visions[new_vision.vision_id] = new_vision;
             }
             draw_visions(){
-                if(this.vision_counter === this.vision_rate){
-                    this.create_vision('bikini');
-                    this.vision_counter = 0;
-                } else {
-                    this.vision_counter += 1
+                if(this.vision_switch_counter === this.vision_switch_rate){
+                    this.vision_index += 1;
+                    if(this.vision_index >= this.visions.length){
+                        this.vision_index = 0;
+                    }
+                    this.vision_switch_counter = 0;
                 }
+                if(this.vision_counter === this.vision_rate){
+                    this.create_vision(this.visions[this.vision_index]);
+                    this.vision_counter = 0;
+                }
+                this.vision_counter += 1
+                this.vision_switch_counter += 1;
                 const to_remove = [];
                 for(const vision_id in this.active_visions){
                     const vision = this.active_visions[vision_id];
@@ -542,7 +560,7 @@
             const start_text = "Click anywhere to start";
             let text_height = ctx.measureText('M').width;
             ctx.fillText(start_text, WIDTH/2 - ctx.measureText(start_text).width/2, HEIGHT/2 - text_height/2);
-            const instructions = ["Instructions:", "WASD to steer. Steer clear of obstacles!", "Maintain a healthy dosage of pills to increase your combo.", "If the pill meter runs out, the game is over!"];
+            const instructions = ["Instructions:", "WASD to steer. Steer clear of obstacles!", "Maintain a healthy dosage of poppers to increase your combo.", "If the poppers meter runs out, the game is over!"];
             ctx.font = "15px " + FONT_NAME;
             text_height = ctx.measureText('M').width;
             for(let i=0; i<instructions.length; i++){
